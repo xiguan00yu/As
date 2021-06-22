@@ -1,0 +1,18 @@
+{
+  "name": "@link-hooks/as",
+  "version": "0.0.1",
+  "description": "jsx render",
+  "main": "dist/jsx.js",
+  "unpkg": "dist/jsx.umd.js",
+  "module": "dist/jsx.js",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "rollup": "^2.52.1"
+  }
+}
