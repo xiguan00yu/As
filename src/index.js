@@ -59,6 +59,27 @@ function td(t = _ => _) {
     put(ts, t) && fst()
 }
 
+// commit dom
+// insert dom
+function cmd(fbr = {/** n, fsibling, fparent, fchild */ }) {
+    // find fbr up layout
+    wip = fbr.fparent.fchild
+    while (wip && wip.fparent) {
+        // handle same layout
+        let p = wip.fparent,
+            c = p.fchild
+        while (c) {
+            p.n.appendChild(c.n)
+            c = c.fsibling
+        }
+        // up up layout
+        wip = p
+    }
+}
+
+// create node fiber
+// diff children
+// tree foreach
 function rco(fbr = {/** t, p, c, k, r, n, ets, fsibling, fparent, fchild */ }) {
     wip = fbr
     if (!fbr.fchild && fbr.c.length > 0) {
@@ -86,14 +107,57 @@ function rco(fbr = {/** t, p, c, k, r, n, ets, fsibling, fparent, fchild */ }) {
             return rco.bind(null, fbr.fsibling)
         }
     }
+
+    td(cmd.bind(null, fbr))
+
     return null
 }
-// TODO
+
+function ue(dom, op, np) {
+    for (let n in { ...op, ...np }) {
+        let oV = op[n], nV = np[n]
+
+        if (n === "style" && !isStr(nV)) {
+            for (const k in { ...oV, ...nV }) {
+                // newV !== oldV
+                if (!(oV && nV && oV[k] === nV[k])) {
+                    dom[n][k] = nV?.[k] || ""
+                }
+            }
+            continue;
+        }
+
+        // onClick ...
+        if (n[0] === "o" && n[1] === "n") {
+            n = n.slice(2).toLowerCase()
+            if (oV) dom.removeEventListener(n, oV)
+            dom.addEventListener(n, nV)
+            continue;
+        }
+
+        // attr
+        if (nV == null || nV === false) {
+            dom.removeAttribute(n)
+        } else {
+            dom.setAttribute(n, nV)
+        }
+    }
+    return dom
+}
+
+function ce(fbr) {
+    return fbr.t === "string"
+        ? document.createTextNode(fbr.n)
+        : ue(document.createElement(fbr.t), {}, fbr.p)
+}
+
+
 function cnf(n) {
     n = typeof n === 'string' ?
         ({ t: 'string', p: [], c: [], n }) :
         n
-    return ({
+
+    let f = {
         t: n.t,
         p: n.p,
         c: n.c,
@@ -104,7 +168,11 @@ function cnf(n) {
         fparent: null,
         fchild: null,
         ets: []
-    })
+    }
+
+    f.t && (f.n = ce(f))
+
+    return f
 }
 
 function As() {
@@ -119,7 +187,6 @@ As.ht = function (ltm) {
 As.r = function (nR, rV) {
     td(() => {
         fnp = cnf({ n: rV, c: [nR] })
-        console.log(fnp)
         return rco(fnp)
     })
 }
