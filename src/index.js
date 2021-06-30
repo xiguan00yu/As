@@ -1,6 +1,14 @@
+
+const LANE = {
+    INIT: 1,
+    MOUNT: 1 << 1,
+    DONE: 1 << 2
+}
+
 const f1rs = 1000 / 60
 
 let wip = null,
+    wiI = 0,
     fnp = null,
     ts = [],
     stm = 0,
@@ -28,8 +36,8 @@ function put(ts = [], t) {
 }
 
 // pop stack top item
-function pop(ts = []) {
-    return ts.pop()
+function shift(ts = []) {
+    return ts.shift()
 }
 
 // have time , continue work ?
@@ -41,7 +49,7 @@ function ht(dl) {
 // start task
 function st(dl) {
     stm = As.gt()
-    let t = pop(ts)
+    let t = shift(ts)
     while (t && ht(dl)) {
         t = t()
     }
@@ -59,29 +67,102 @@ function td(t = _ => _) {
     put(ts, t) && fst()
 }
 
+function rs(fbr) {
+    wip = fbr
+    wiI = 0
+}
+
+function difp(lp, np) {
+    if (!lp || !np) return true
+
+    if (lp.length !== np.length) return true
+
+    for (let i = 0; i < lp.length; i++) {
+        if (lp[i] !== np[i]) {
+            return true
+        }
+    }
+
+    return false
+}
+
+
+// effect tree
+function etf(f = {/** n, ets, fsibling, fparent, fchild */ }) {
+    // fbr = App fbr
+    let fbr = f
+    loop:
+    while (fbr) {
+        // find bottom fbr
+        while (fbr && fbr.fchild && fbr.fchild.l & LANE.MOUNT) {
+            fbr = fbr.fchild
+        }
+        rs(fbr)
+        // effect ....
+        while (fbr.ets[wiI]) {
+            let et = fbr.ets[wiI]
+            if (et.e && difp(et.lp, et.np)) {
+                fbr.ets[wiI].rt = et.e()
+            }
+            wiI++
+        }
+        fbr.l = LANE.DONE
+        if (fbr.fsibling) {
+            fbr = fbr.fsibling
+            continue loop;
+        }
+        if (fbr.fparent) {
+            fbr = fbr.fparent
+            continue loop;
+        }
+        rs((fbr = null))
+    }
+}
+
 // commit dom
 // insert dom
-function cmd(fbr = {/** n, fsibling, fparent, fchild */ }) {
-    // find fbr up layout
-    wip = fbr.fparent.fchild
-    while (wip && wip.fparent) {
+function cdf(fbr = {/** n, fsibling, fparent, fchild */ }) {
+    // find bottom layout
+    let fip = fbr
+    while (fip.fchild) {
+        fip = fip.fchild
+    }
+    loop:
+    while (fip && fip.fparent) {
         // handle same layout
-        let p = wip.fparent,
-            c = p.fchild
+        let p = fip.fparent,
+            c = p.fchild,
+            jfs = []
+
+        while (p && p.n._jsx) {
+            jfs.push(p)
+            p = p.fparent
+        }
+
         while (c) {
+            if (c.n.childNodes.length < c.c.length) {
+                fip = c
+                while (fip.fchild) {
+                    fip = fip.fchild
+                }
+                continue loop
+            }
+            c.l = LANE.MOUNT
             p.n.appendChild(c.n)
             c = c.fsibling
         }
+        // m layout 
+        jfs.forEach(jp => (jp.l = LANE.MOUNT))
         // up up layout
-        wip = p
+        fip = p
     }
+    return null
 }
 
 // create node fiber
 // diff children
 // tree foreach
 function rco(fbr = {/** t, p, c, k, r, n, ets, fsibling, fparent, fchild */ }) {
-    wip = fbr
     if (!fbr.fchild && fbr.c.length > 0) {
         fbr.fchild = cnf(fbr.c[0])
         fbr.fchild.fparent = fbr
@@ -108,7 +189,14 @@ function rco(fbr = {/** t, p, c, k, r, n, ets, fsibling, fparent, fchild */ }) {
         }
     }
 
-    td(cmd.bind(null, fbr))
+    if (fbr.fparent) {
+        return rco.bind(null, fbr.fparent)
+    }
+
+    // commit node
+    td(cdf.bind(null, fbr))
+    // effect    
+    td(etf.bind(null, fbr))
 
     return null
 }
@@ -153,7 +241,7 @@ function ce(fbr) {
 
 
 function cnf(n) {
-    n = typeof n === 'string' ?
+    n = typeof n === 'string' || typeof n === 'number' ?
         ({ t: 'string', p: [], c: [], n }) :
         n
 
@@ -164,19 +252,55 @@ function cnf(n) {
         k: n.k,
         r: n.r,
         n: n.n,
+        l: n.l || LANE.INIT,
         fsibling: null,
         fparent: null,
         fchild: null,
         ets: []
     }
 
-    f.t && (f.n = ce(f))
+    switch (typeof f.t) {
+        case 'string':
+            f.n = ce(f)
+            break;
+        case 'function':
+            f.p.c = f.p.c || f.c
+            f.n = n
+            rs(f)
+            f.c = [f.t(f.p)]
+            break;
+        default:
+            break;
+    }
 
     return f
 }
 
 function As() {
     // TODO
+}
+As.us = function (ins) {
+    let cfb = wip,
+        cT = cfb.ets[wiI]
+    if (!cT) {
+        cfb.ets[wiI] = cT = {
+            s: typeof ins === 'function' ? ins() : ins
+        }
+    }
+    wiI++
+    return [cT.s, (ns) => {
+        ns = typeof ns === 'function' ? ns(cT.s) : ns
+        if (ns !== cT.s) {
+            cT.s = ns
+            // TODO
+            rco(cfb)
+        }
+    }]
+}
+As.ue = function (e = () => { }, np = []) {
+    let cT = wip.ets[wiI]
+    wip.ets[wiI] = { e, np, lp: cT?.np }
+    wiI++
 }
 As.gt = function () {
     return performance.now()
@@ -186,7 +310,7 @@ As.ht = function (ltm) {
 }
 As.r = function (nR, rV) {
     td(() => {
-        fnp = cnf({ n: rV, c: [nR] })
+        fnp = cnf({ n: rV, c: [nR], l: LANE.MOUNT })
         return rco(fnp)
     })
 }

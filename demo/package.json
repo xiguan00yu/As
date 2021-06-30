@@ -9,6 +9,6 @@
     "vite": "^2.3.7"
   },
   "dependencies": {
-    "@link-hooks/jsx": "^1.2.2"
+    "@link-hooks/jsx": "^2.0.1"
   }
 }
