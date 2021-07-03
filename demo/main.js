@@ -10,7 +10,7 @@ const Row = ({ c }) => {
   const [count, setCount] = As.us(1)
   As.ue(() => {
     console.log('ue')
-  }, [1])
+  }, [count])
   const onClick = () => {
     setCount(c => c + 1)
   }
