@@ -175,9 +175,10 @@ function cdf(fbr = {/** n, fsibling, fparent, fchild */ }) {
                     throw Error('why ? no last node')
                 }
                 c.l = LANE.MOUNT
-                p.n.removeChild(c.ln)
+                p.n.replaceChild(c.n, c.ln)
+                // p.n.insertBefore(c.n, c.ln)
+                // p.n.removeChild(c.ln)
                 c.ln = null
-                p.n.appendChild(c.n)
             }
             c = c.fsibling
         }
@@ -254,7 +255,7 @@ function urco(fbr, oldn, newn) {
         isdft = dift(oldn, newn),
         isdfp = difp(oldn.p, newn.p)
 
-    if (!(fbr.l & LANE.UPDATE)) {
+        if (!(fbr.l & LANE.UPDATE)) {
 
         // update fbr
         if (isdft) {
@@ -276,10 +277,11 @@ function urco(fbr, oldn, newn) {
                     pc = c
                     c = pc.fsibling
                 }
+                // c => fp.fchild
                 if (c === self && c === fp.fchild) {
                     fp.fchild = fbr
-                }
-                if (c === self && c !== fp.fchild) {
+                // c => fp.fsibling
+                } else if (c === self && c !== fp.fchild) {
                     pc.fsibling = fbr
                 }
             }
@@ -307,7 +309,7 @@ function urco(fbr, oldn, newn) {
         forEach = (arr, func) => arr.forEach(func)
 
     while (ni < ocl || ni < ncl) {
-        console.log('nfc', nfc)
+
         if (!oca[ni]) {
             let t = { fchild: null, fsibling: pfc, fparent: fbr }
             urn++

@@ -8,16 +8,18 @@ const o = { c: 0 }
 
 const Row = ({ c }) => {
   const [count, setCount] = As.us(1)
+
   As.ue(() => {
     console.log('ue')
   }, [count])
+  
   const onClick = () => {
     setCount(c => c + 1)
   }
+  
   return jsx`
     <div o=${o} onClick=${onClick}>
-      <span>${c}</span>
-      ${count}
+      Hello ${count} <strong> ${'world!'}</strong>
     </div>`
 }
 
